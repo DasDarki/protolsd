@@ -10,10 +10,11 @@ import (
 // analyzer is the struct that will be used to analyze the AST and convert it to the ProtoLSD model.
 type analyzer struct {
 	*parser.BaseProtoLSDListener
-	inGlobalScope bool
-	script        *script
-	prevMessage   *message
-	currSerivce   *service
+	inGlobalScope      bool
+	script             *script
+	prevMessage        *message
+	currSerivce        *service
+	visitedMessageDefs map[*parser.MessageDefinitionContext]bool
 }
 
 func (a *analyzer) EnterPreprocessorDirective(ctx *parser.PreprocessorDirectiveContext) {
@@ -136,6 +137,12 @@ func (a *analyzer) EnterEnumDefinition(ctx *parser.EnumDefinitionContext) {
 }
 
 func (a *analyzer) EnterMessageDefinition(ctx *parser.MessageDefinitionContext) {
+	if a.visitedMessageDefs[ctx] {
+		return
+	}
+
+	a.visitedMessageDefs[ctx] = true
+
 	parent := a.prevMessage
 
 	name := ctx.IDENTIFIER().GetText()

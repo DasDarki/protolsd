@@ -133,7 +133,8 @@ func (c *Compiler) anaylzeFile(file string, pkg *scriptPackage) error {
 			Messages:      map[string]*message{},
 			Services:      map[string]*service{},
 		},
-		inGlobalScope: true,
+		inGlobalScope:      true,
+		visitedMessageDefs: map[*parser.MessageDefinitionContext]bool{},
 	}
 
 	antlr.ParseTreeWalkerDefault.Walk(a, p.ProtoLSD())
