@@ -201,7 +201,6 @@ import "google/protobuf/any.proto";
 Currently, not all functionality of Protobuf 3 is supported by ProtoLSD. The following features are not supported:
 - Oneof
 - Extensions
-- Services with streaming
 - Possibly more
 
 Currently there is also limited support of nested packages/messages. For nested messages there is no issue but for nested packages, only the depth of 1 is supprted:
@@ -212,3 +211,11 @@ somepackage.subpackage.Message // this is not supported
 
 ### Some notes to the persist order mode
 This only works for directly defined messages. This does not work for messages which are defined through direct input/return in the method definition.
+
+## Current ToDos
+- [ ] Add oneof
+- [ ] Add extensions
+- [ ] Add nested packages
+- [ ] Add env variables in the configuration file
+- [ ] Add auto completion to protobuf targets
+- [ ] Add LSP and VSCode extension
