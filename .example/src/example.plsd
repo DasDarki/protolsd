@@ -16,6 +16,8 @@ message Task {
     }
   }
 
+  bool kek;
+  bool kek2
   string id
   string title
   string? description

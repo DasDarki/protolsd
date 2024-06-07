@@ -125,7 +125,21 @@ func (c *Compiler) resolveFieldNumbers() error {
 				// first iteration: find all used numbers and the biggest assigned number to start from
 				for _, field := range msg.Fields {
 					if field.Order <= 0 {
-						continue // skip, because not yet set
+						assignedNumber := getAssignedNumber(c.mapping, sc.Path, msg.Name, field.Name)
+						if assignedNumber != nil {
+							if usedNumbers[*assignedNumber] {
+								deleteAssignedNumber(c.mapping, sc.Path, msg.Name, field.Name)
+							} else {
+								if *assignedNumber > biggestNumber {
+									biggestNumber = *assignedNumber + 1
+								}
+
+								usedNumbers[*assignedNumber] = true
+								field.Order = *assignedNumber
+							}
+						}
+
+						continue
 					}
 
 					if usedNumbers[field.Order] {

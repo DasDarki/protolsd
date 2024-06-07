@@ -209,3 +209,6 @@ Currently there is also limited support of nested packages/messages. For nested 
 somepackage.Message // this is supported
 somepackage.subpackage.Message // this is not supported
 ```
+
+### Some notes to the persist order mode
+This only works for directly defined messages. This does not work for messages which are defined through direct input/return in the method definition.
