@@ -36,7 +36,7 @@ The `@` alias can be used to import files relative to the source folder.
 Every script which is in the same folder has access to all other scripts in the same folder. This means that you can import other scripts without specifying the path. This is useful for splitting up your proto file into multiple files. At compile time, ProtoLSD will automatically resolve the imports. Explicit imports will always take precedence over automatic imports. Importing folders makes the compiler aware of all files in that folder but only for that specific file. 
 
 ### Automatic field numbering
-ProtoLSD automatically assigns field numbers to fields in the order they are defined. You don't need to manually assign field numbers. If ProtoLSD "order_persist" mode is enabled, ProtoLSD tries to keep the field numbers the same across different versions of the proto file by storing needed information in a `.protolsd_persist` file in the same directory as the ProtoLSD configuration file.
+ProtoLSD automatically assigns field numbers to fields in their alphabetical order. You don't need to manually assign field numbers. If ProtoLSD "order_persist" mode is enabled, ProtoLSD tries to keep the field numbers the same across different versions of the proto file by storing needed information in a `.protolsd_persist` file in the same directory as the ProtoLSD configuration file.
 
 Adding a bang `!` at the end of a number, will overwrite the current persisted field number.
 
