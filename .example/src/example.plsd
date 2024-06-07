@@ -1,0 +1,33 @@
+#private-import(global)
+
+import "google/protobuf/empty.proto";
+
+@NoEnumClass
+enum TodoStatus {
+  OPEN
+  IN_PROGRESS = 5
+  DONE
+}
+
+message Task {
+  message KleinerTask {
+    string kek
+    message NochKleiner {
+      string lol
+    }
+  }
+
+  string id
+  string title
+  string? description
+  string[] users
+  TodoStatus status
+}
+
+service TodoService {
+  rpc GetTasks returns (Task);
+  rpc CreateTask(Task) returns (Task);
+  rpc UpdateTask(Task) returns (bool success);
+  rpc DeleteTask(Task, bool *2);
+  rpc ANotherDeleteTask(Task, bool+ overwrite, force, int k) returns {};
+}

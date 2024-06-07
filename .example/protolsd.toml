@@ -1,0 +1,15 @@
+input_dir = "src" # The directory containing the source files
+output_dir = "out" # The directory to output the generated code to
+output_type = "protobuf" # The output type of the generated code. Either "protobuf" or "compiled". "protobuf" will generate the .proto files, "compiled" will generate the compiled code from the .proto files.
+minimize = false # Whether to transpile the input files into one output file or not
+order_persist = true # Whether ProtoLSD should save a file containing the order of the fields of every message in the input files.
+
+[protobuf]
+version = "27.1" # The version of the protobuf compiler to use. Can be empty or "latest" for the latest version.
+auto_dl = true # Whether to automatically download the protobuf compiler or not
+package = "example.test"
+targets = ["go", "csharp"]
+
+[protobuf.options] # Options for the protobuf compiler. Options are appended to all output files using the protobuf "option" directive.
+go_package = "example.test"
+csharp_namespace = "Example.Test"
