@@ -96,43 +96,102 @@ func (c *Compiler) generatePackage(dir string, pkg *scriptPackage) error {
 	}
 
 	for _, sc := range pkg.Scripts {
+		var generateMessage func(*message, *ProtoBuilder)
+		generateMessage = func(m *message, pb *ProtoBuilder) {
+			fields := map[string]ProtoField{}
+
+			for _, f := range m.Fields {
+				if !isDataTypeValidInContext(sc, f.DataType) {
+					panic(fmt.Errorf("invalid data type %s for %s of %s in context of script %s", f.DataType.Text, f.Name, m.Name, sc.Path))
+				}
+
+				modifiers := []string{}
+
+				if f.DataType.IsOptional {
+					modifiers = append(modifiers, "optional")
+				}
+
+				if f.DataType.IsArray {
+					modifiers = append(modifiers, "repeated")
+				}
+
+				fields[f.Name] = ProtoField{
+					Type:     f.DataType.Text,
+					Number:   f.Order,
+					Modifier: strings.Join(modifiers, " "),
+				}
+			}
+
+			pb.AddMessage(m.Name, fields, func(pb *ProtoBuilder) {
+				if m.Children != nil {
+					for _, child := range m.Children {
+						generateMessage(child, pb)
+					}
+				}
+			})
+		}
+
 		for _, msg := range sc.Messages {
-			var generateMessage func(*message, *ProtoBuilder)
-			generateMessage = func(m *message, pb *ProtoBuilder) {
-				fields := map[string]ProtoField{}
+			generateMessage(msg, builder)
+		}
 
-				for _, f := range m.Fields {
-					if !isDataTypeValidInContext(sc, f.DataType) {
-						panic(fmt.Errorf("invalid data type %s for %s of %s in context of script %s", f.DataType.Text, f.Name, m.Name, sc.Path))
-					}
+		for _, s := range sc.Services {
+			for _, rpc := range s.Rpcs {
+				if rpc.Input != nil && rpc.Input.Message != nil {
+					generateMessage(rpc.Input.Message, builder)
+				}
 
-					modifiers := []string{}
+				if rpc.Returns != nil && rpc.Returns.Message != nil {
+					generateMessage(rpc.Returns.Message, builder)
+				}
+			}
+		}
+	}
 
-					if f.DataType.IsOptional {
-						modifiers = append(modifiers, "optional")
-					}
+	for _, sc := range pkg.Scripts {
+		for _, s := range sc.Services {
+			methods := map[string][2]string{}
 
-					if f.DataType.IsArray {
-						modifiers = append(modifiers, "repeated")
-					}
+			for _, rpc := range s.Rpcs {
+				input := ""
+				output := ""
 
-					fields[f.Name] = ProtoField{
-						Type:     f.DataType.Text,
-						Number:   f.Order,
-						Modifier: strings.Join(modifiers, " "),
+				if rpc.Input == nil {
+					input = "common.EmptyRequest"
+				} else {
+					if rpc.Input.Message == nil {
+						msgName := sc.resolveDataTypeAlias(*rpc.Input.Name)
+
+						if sc.isTypeDeclared(msgName) || isMessageAvailable(sc, msgName) {
+							input = msgName
+						} else {
+							panic(fmt.Errorf("message %s not found in script %s", msgName, sc.Path))
+						}
+					} else {
+						input = rpc.Input.Message.Name
 					}
 				}
 
-				pb.AddMessage(m.Name, fields, func(pb *ProtoBuilder) {
-					if m.Children != nil {
-						for _, child := range m.Children {
-							generateMessage(child, pb)
+				if rpc.Returns == nil {
+					output = "common.EmptyResponse"
+				} else {
+					if rpc.Returns.Message == nil {
+						msgName := sc.resolveDataTypeAlias(*rpc.Returns.Name)
+
+						if sc.isTypeDeclared(msgName) || isMessageAvailable(sc, msgName) {
+							output = msgName
+						} else {
+							panic(fmt.Errorf("message %s not found in script %s", msgName, sc.Path))
 						}
+					} else {
+						output = rpc.Returns.Message.Name
 					}
-				})
+				}
+
+				methods[rpc.Name] = [2]string{input, output}
 			}
 
-			generateMessage(msg, builder)
+			builder.AddService(s.Name, methods)
 		}
 	}
 
@@ -197,6 +256,11 @@ func isDataTypeValidInContext(sc *script, dt *dataType) bool {
 	}
 
 	return true
+}
+
+func isMessageAvailable(sc *script, name string) bool {
+	result := sc.find(name)
+	return result != nil && result.Message != nil
 }
 
 func writeProtoFile(filename, code string) error {
