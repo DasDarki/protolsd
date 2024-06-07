@@ -148,11 +148,11 @@ messageBodyStatement
     ;
 
 messageField
-    : optionalModifier? dataType IDENTIFIER (EQUAL NUMBER)?
+    : optionalModifier? dataType IDENTIFIER (EQUAL NUMBER BANG?)?
     ;
 
 preprocessorParameters
-    : LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
+    : LPAREN (rpcMessageValue (COMMA rpcMessageValue)*)? RPAREN
     ;
 
 preprocessorDirective

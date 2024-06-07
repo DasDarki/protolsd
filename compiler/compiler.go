@@ -6,45 +6,80 @@ import (
 	"os"
 	"path"
 	"protolsd/parser"
-	"strings"
 
 	"github.com/antlr4-go/antlr/v4"
 )
 
 type Compiler struct {
-	config  *Config
-	scripts map[string]*script
+	config     *Config
+	baseDir    string
+	srcDir     string
+	srcPackage *scriptPackage
+	scripts    []*script
+	mapping    fieldNumberMapping
 }
 
-func NewCompiler(config *Config) *Compiler {
-	return &Compiler{
+func NewCompiler(config *Config, baseDir string) *Compiler {
+	c := &Compiler{
 		config:  config,
-		scripts: map[string]*script{},
+		baseDir: baseDir,
+		srcDir:  path.Join(baseDir, config.InputDir),
+		srcPackage: &scriptPackage{
+			Path:              "",
+			Name:              unptr(config.Protobuf.Package),
+			AreImportsPrivate: false,
+			Scripts:           map[string]*script{},
+			Packages:          map[string]*scriptPackage{},
+		},
+		scripts: []*script{},
+		mapping: fieldNumberMapping{},
 	}
+
+	if c.config.OrderPersist != nil && *c.config.OrderPersist {
+		mapping, err := readFieldNumberMapping(path.Join(baseDir, ".protolsd_persist"))
+		if err != nil {
+			log.Printf("Failed to read field number mapping: %v", err)
+		} else {
+			c.mapping = mapping
+		}
+	}
+
+	return c
 }
 
-func (c *Compiler) Compile(baseDir string) error {
-	srcDir := path.Join(baseDir, c.config.InputDir)
+func (c *Compiler) Compile() error {
+	if err := c.analyzeDir(c.srcDir, c.srcPackage); err != nil {
+		return err
+	}
 
-	return c.compileDir(baseDir, srcDir)
+	if err := c.resolve(); err != nil {
+		return err
+	}
+
+	if err := c.generate(); err != nil {
+		return err
+	}
+
+	if c.config.OrderPersist != nil && *c.config.OrderPersist {
+		if err := saveFieldNumberMapping(c.mapping, path.Join(c.baseDir, ".protolsd_persist")); err != nil {
+			log.Printf("WARNING: Failed to save field number mapping: %v", err)
+		}
+	}
+
+	return nil
 }
 
 func (c *Compiler) Debug() {
-	for path, script := range c.scripts {
-		println(path)
-
-		jsonText, err := json.MarshalIndent(script, "", "  ")
-		if err != nil {
-			log.Println("Failed to marshal script to JSON!")
-			return
-		}
-
-		println(string(jsonText))
+	jsonText, err := json.MarshalIndent(c.srcPackage, "", "  ")
+	if err != nil {
+		log.Println("Failed to marshal script to JSON!")
+		return
 	}
+
+	println(string(jsonText))
 }
 
-func (c *Compiler) compileDir(baseDir, dir string) error {
-	// iterate over all files in dir and subdirectories which have the .plsd extension
+func (c *Compiler) analyzeDir(dir string, pkg *scriptPackage) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return err
@@ -52,11 +87,22 @@ func (c *Compiler) compileDir(baseDir, dir string) error {
 
 	for _, entry := range entries {
 		if entry.IsDir() {
-			if err := c.compileDir(baseDir, path.Join(dir, entry.Name())); err != nil {
+			childPkg := &scriptPackage{
+				Name:              entry.Name(),
+				Path:              path.Join(dir, entry.Name()),
+				AreImportsPrivate: false,
+				Parent:            pkg,
+				Scripts:           map[string]*script{},
+				Packages:          map[string]*scriptPackage{},
+			}
+
+			pkg.Packages[childPkg.Name] = childPkg
+
+			if err := c.analyzeDir(path.Join(dir, entry.Name()), childPkg); err != nil {
 				return err
 			}
 		} else if path.Ext(entry.Name()) == ".plsd" {
-			if err := c.compileFile(baseDir, path.Join(dir, entry.Name())); err != nil {
+			if err := c.anaylzeFile(path.Join(dir, entry.Name()), pkg); err != nil {
 				return err
 			}
 		}
@@ -65,14 +111,11 @@ func (c *Compiler) compileDir(baseDir, dir string) error {
 	return nil
 }
 
-func (c *Compiler) compileFile(baseDir, file string) error {
+func (c *Compiler) anaylzeFile(file string, pkg *scriptPackage) error {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return err
 	}
-
-	relPath := strings.TrimPrefix(strings.ReplaceAll("\\", "/", file), strings.ReplaceAll("\\", "/", baseDir))
-	relPath = strings.TrimPrefix(relPath, "/")
 
 	is := antlr.NewInputStream(string(data))
 	lexer := parser.NewProtoLSDLexer(is)
@@ -81,19 +124,22 @@ func (c *Compiler) compileFile(baseDir, file string) error {
 
 	a := &analyzer{
 		script: &script{
-			Path:        relPath,
-			Imports:     []*importStatement{},
-			TypeAliases: map[string]string{},
-			Enums:       map[string]*enum{},
-			Messages:    map[string]*message{},
-			Services:    map[string]*service{},
+			Package:       pkg,
+			Path:          file,
+			Imports:       []*importStatement{},
+			TypeAliases:   map[string]string{},
+			DeclaredTypes: map[string]bool{},
+			Enums:         map[string]*enum{},
+			Messages:      map[string]*message{},
+			Services:      map[string]*service{},
 		},
 		inGlobalScope: true,
 	}
 
 	antlr.ParseTreeWalkerDefault.Walk(a, p.ProtoLSD())
 
-	c.scripts[relPath] = a.script
+	pkg.Scripts[file] = a.script
+	c.scripts = append(c.scripts, a.script)
 
 	return nil
 }

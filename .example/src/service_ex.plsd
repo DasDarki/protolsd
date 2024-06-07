@@ -1,0 +1,7 @@
+service TodoService {
+  rpc GetTasks returns (Task);
+  rpc CreateTask(Task) returns (Task);
+  rpc UpdateTask(Task) returns (bool success);
+  rpc DeleteTask(Task, bool *2);
+  rpc ANotherDeleteTask(Task, bool+ overwrite, force, int k) returns {};
+}

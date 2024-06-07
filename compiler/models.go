@@ -1,21 +1,32 @@
 package compiler
 
+type scriptPackage struct {
+	Path              string                    `json:"path"`
+	Name              string                    `json:"name"`
+	AreImportsPrivate bool                      `json:"areImportsPrivate"`
+	Parent            *scriptPackage            `json:"parent"`
+	Scripts           map[string]*script        `json:"scripts"`
+	Packages          map[string]*scriptPackage `json:"packages"`
+}
+
 type script struct {
+	Package           *scriptPackage      `json:"-"`
 	Path              string              `json:"path"`
 	AreImportsPrivate bool                `json:"areImportsPrivate"`
 	UsedEmptyResponse bool                `json:"usedEmptyResponse"`
 	UsedEmptyRequest  bool                `json:"usedEmptyRequest"`
 	Imports           []*importStatement  `json:"imports"`
 	TypeAliases       map[string]string   `json:"typeAliases"`
+	DeclaredTypes     map[string]bool     `json:"declaredTypes"`
 	Enums             map[string]*enum    `json:"enums"`
 	Messages          map[string]*message `json:"messages"`
 	Services          map[string]*service `json:"services"`
+	AccessibleScripts []*script           `json:"-"` // gets resolved during resolve phase
 }
 
 type importStatement struct {
-	Path    string  `json:"path"`
-	Private bool    `json:"private"`
-	Script  *script `json:"script"`
+	Path    string `json:"path"`
+	Private bool   `json:"private"`
 }
 
 type enum struct {
@@ -31,10 +42,11 @@ type message struct {
 }
 
 type messageField struct {
-	Name     string    `json:"name"`
-	DataType *dataType `json:"dataType"`
-	Order    int       `json:"order"`
-	Modifier *string   `json:"modifier"`
+	Name      string    `json:"name"`
+	DataType  *dataType `json:"dataType"`
+	Order     int       `json:"order"`
+	Modifier  *string   `json:"modifier"`
+	Overwrite bool      `json:"overwrite"`
 }
 
 type dataType struct {

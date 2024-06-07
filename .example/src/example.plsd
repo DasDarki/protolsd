@@ -2,7 +2,6 @@
 
 import "google/protobuf/empty.proto";
 
-@NoEnumClass
 enum TodoStatus {
   OPEN
   IN_PROGRESS = 5
@@ -22,12 +21,4 @@ message Task {
   string? description
   string[] users
   TodoStatus status
-}
-
-service TodoService {
-  rpc GetTasks returns (Task);
-  rpc CreateTask(Task) returns (Task);
-  rpc UpdateTask(Task) returns (bool success);
-  rpc DeleteTask(Task, bool *2);
-  rpc ANotherDeleteTask(Task, bool+ overwrite, force, int k) returns {};
 }

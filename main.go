@@ -72,8 +72,8 @@ func compile(c *cli.Context) error {
 		return err
 	}
 
-	compiler := compiler.NewCompiler(config)
-	if err := compiler.Compile(dir); err != nil {
+	compiler := compiler.NewCompiler(config, dir)
+	if err := compiler.Compile(); err != nil {
 		log.Println("CRITICAL: Failed to compile!")
 		return err
 	}

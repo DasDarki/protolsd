@@ -20,8 +20,8 @@ ProtoLSD supports both single-line and multi-line comments. Single-line comments
 ProtoLSD supports preprocessor directives. Preprocessor directives start with `#`. Preprocessor directives can have arguments which are passed in parentheses. If a preprocessor directive has no arguments, the parentheses can be omitted.
 
 ### Imports
-ProtoLSD supports importing other ProtoLSD files using the `import` keyword. The `import` keyword is followed by the path to the file to import. The path can be either an absolute path or a relative path. If the path is a relative path, it is relative to the directory of the importing file.   
-ProtoLSD will resolve any imports recursively and generates the respective protobuf files and their includes. To disable this behavior, private imports can be used by using the `private` keyword before the `import` keyword, adding a `#private-import(global)` directive to the file, using the `#private-import` directive before the linebreak or semicolon to the `import` directive, or using a bang at the end of the import keyword.
+ProtoLSD supports importing other ProtoLSD files and folders using the `import` keyword. The `import` keyword is followed by the path to the file to import. The path can be either an absolute path or a relative path. If the path is a relative path, it is relative to the directory of the importing file. Relative paths must start with `./` or `../`.   
+ProtoLSD will resolve any imports recursively and generates the respective protobuf files and their includes. To disable this behavior, private imports can be used by using the `private` keyword before the `import` keyword, adding a `#private-import(global)` directive to the file, using the `#private-import` directive before the linebreak or semicolon, or using a bang at the end of the import path.
 
 Valid import examples:
 ```proto
@@ -30,9 +30,15 @@ private import "path/to/file.plsd";
 import "path/to/file.plsd"!;
 import "path/to/file.plsd" #private-import;
 ```
+The `@` alias can be used to import files relative to the source folder.
+
+#### Automatic imports
+Every script which is in the same folder has access to all other scripts in the same folder. This means that you can import other scripts without specifying the path. This is useful for splitting up your proto file into multiple files. At compile time, ProtoLSD will automatically resolve the imports. Explicit imports will always take precedence over automatic imports. Importing folders makes the compiler aware of all files in that folder but only for that specific file. 
 
 ### Automatic field numbering
 ProtoLSD automatically assigns field numbers to fields in the order they are defined. You don't need to manually assign field numbers. If ProtoLSD "order_persist" mode is enabled, ProtoLSD tries to keep the field numbers the same across different versions of the proto file by storing needed information in a `.protolsd_persist` file in the same directory as the ProtoLSD configuration file.
+
+Adding a bang `!` at the end of a number, will overwrite the current persisted field number.
 
 ### DataTypes
 All protobuf data types are the same. There are some aliases for the data types. The following table shows the aliases for the data types:
@@ -40,6 +46,7 @@ All protobuf data types are the same. There are some aliases for the data types.
 |-------|-----------|
 | `int` | `int32`   |
 | `uint` | `uint32` |
+| `sint` | `sint32` |
 | `long` | `int64`  |
 | `ulong` | `uint64`|
 
@@ -170,7 +177,7 @@ service MyService {
     rpc MyMethod(int+ param1, param2, string);
 }
 ```
-Any named parameter after a grouped parameter will be assigned the next same data type, until a new data type is specified.
+Any named parameter after a grouped parameter will be assigned the same data type, until a new data type is specified.
 
 The same works for return types:
 ```proto
@@ -179,8 +186,26 @@ service MyService {
 }
 ```
 
+### Importing external proto files
+Its common that you need to import external protobuf files like google's protobuf libraries adding any or something like this. ProtoLSD doesn't directly support those imported types because it doesn't know about them. To solve this, ProtoLSD allows you declare such types through a respective preprocessor directive called `#decl-type`. This directive does not ensure the presence of the type, it just tells ProtoLSD that the type exists, which disables any type checking for this type. The directive can be used like this:
+```proto
+#decl-type(google.protobuf.Any)
+```
+
+To ensure, that the type is present after generating the protobuf files, an import statement should be added to the file, importing the protobuf file. This can be done by using the `import` statement:
+```proto
+import "google/protobuf/any.proto";
+```
+
 ### Protbuf 3 compatibility
 Currently, not all functionality of Protobuf 3 is supported by ProtoLSD. The following features are not supported:
 - Oneof
 - Extensions
 - Services with streaming
+- Possibly more
+
+Currently there is also limited support of nested packages/messages. For nested messages there is no issue but for nested packages, only the depth of 1 is supprted:
+```proto
+somepackage.Message // this is supported
+somepackage.subpackage.Message // this is not supported
+```

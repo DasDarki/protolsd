@@ -1,2 +1,6 @@
 .antlr/
 .bin/
+
+.example/out/
+
+*.protolsd_persist

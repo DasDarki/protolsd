@@ -19,7 +19,6 @@ type Config struct {
 	InputDir     string                 `toml:"input_dir"`
 	OutputDir    *string                `toml:"output_dir"`
 	OutputType   *OutputType            `toml:"output_type"`
-	Minimize     *bool                  `toml:"minimize"`
 	OrderPersist *bool                  `toml:"order_persist"`
 	Protobuf     *ConfigProtobufSection `toml:"protobuf"`
 }
@@ -58,10 +57,6 @@ func LoadConfig(dir string) (*Config, error) {
 		config.OutputType = ptr(OutputTypeLSD)
 	}
 
-	if config.Minimize == nil {
-		config.Minimize = ptr(false)
-	}
-
 	if config.OrderPersist == nil {
 		config.OrderPersist = ptr(true)
 	}
@@ -98,7 +93,6 @@ func GenerateMinimalConfig(dir string) error {
 		InputDir:   dir,
 		OutputDir:  ptr("dist"),
 		OutputType: ptr(OutputTypeLSD),
-		Minimize:   ptr(true),
 		Protobuf: &ConfigProtobufSection{
 			Version: ptr("latest"),
 			AutoDL:  ptr(true),
@@ -118,4 +112,8 @@ func GenerateMinimalConfig(dir string) error {
 
 func ptr[T any](v T) *T {
 	return &v
+}
+
+func unptr[T any](v *T) T {
+	return *v
 }

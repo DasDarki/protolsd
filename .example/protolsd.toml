@@ -1,7 +1,8 @@
+env_file = "" # Loads environment variables from a file. If empty, no file is loaded. Any string can be replaced with a "$<env_var_name>" to load the value of an environment variable.
+
 input_dir = "src" # The directory containing the source files
 output_dir = "out" # The directory to output the generated code to
 output_type = "protobuf" # The output type of the generated code. Either "protobuf" or "compiled". "protobuf" will generate the .proto files, "compiled" will generate the compiled code from the .proto files.
-minimize = false # Whether to transpile the input files into one output file or not
 order_persist = true # Whether ProtoLSD should save a file containing the order of the fields of every message in the input files.
 
 [protobuf]
@@ -13,3 +14,6 @@ targets = ["go", "csharp"]
 [protobuf.options] # Options for the protobuf compiler. Options are appended to all output files using the protobuf "option" directive.
 go_package = "example.test"
 csharp_namespace = "Example.Test"
+
+[protobuf.target.go]
+output_dir = "go" # The directory to output the generated Go code to. This is relative to the output_dir.

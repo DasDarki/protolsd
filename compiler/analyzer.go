@@ -49,6 +49,18 @@ func (a *analyzer) EnterPreprocessorDirective(ctx *parser.PreprocessorDirectiveC
 		}
 
 		a.script.TypeAliases[alias] = baseType
+	} else if name == "decl-type" {
+		if len(params) != 1 {
+			panic("invalid number of parameters for #decl-type")
+		}
+
+		typeDecl := params[0]
+
+		if _, ok := a.script.DeclaredTypes[typeDecl]; ok {
+			panic(fmt.Sprintf("type '%s' already declared", typeDecl))
+		}
+
+		a.script.DeclaredTypes[typeDecl] = true
 	}
 }
 
@@ -68,7 +80,6 @@ func (a *analyzer) EnterImportStatement(ctx *parser.ImportStatementContext) {
 	importStmt := &importStatement{
 		Path:    path,
 		Private: isPrivate,
-		Script:  nil,
 	}
 
 	a.script.Imports = append(a.script.Imports, importStmt)
@@ -128,8 +139,10 @@ func (a *analyzer) EnterMessageDefinition(ctx *parser.MessageDefinitionContext) 
 	parent := a.prevMessage
 
 	name := ctx.IDENTIFIER().GetText()
-	if a.script.Messages[name] != nil {
-		panic(fmt.Sprintf("message '%s' already defined", name))
+	if parent != nil {
+		if a.script.Messages[name] != nil {
+			panic(fmt.Sprintf("message '%s' already defined", name))
+		}
 	}
 
 	message := &message{
@@ -144,15 +157,14 @@ func (a *analyzer) EnterMessageDefinition(ctx *parser.MessageDefinitionContext) 
 		a.script.Messages[name] = message
 	}
 
-	counter := 0
-
 	for _, stmt := range ctx.MessageBody().AllMessageBodyStatement() {
 		if stmt.MessageField() != nil {
 			field := stmt.MessageField()
 
 			fieldName := field.IDENTIFIER().GetText()
 			fieldType := resolveDataType(field.DataType())
-			fieldOrder := counter
+			fieldOrder := -1
+			overwrite := false
 
 			var fieldModifier *string
 			if field.OptionalModifier() != nil {
@@ -170,7 +182,10 @@ func (a *analyzer) EnterMessageDefinition(ctx *parser.MessageDefinitionContext) 
 				}
 
 				fieldOrder = order
-				counter = order + 1
+
+				if field.BANG() != nil {
+					overwrite = true
+				}
 			}
 
 			if _, ok := message.Fields[fieldName]; ok {
@@ -178,15 +193,11 @@ func (a *analyzer) EnterMessageDefinition(ctx *parser.MessageDefinitionContext) 
 			}
 
 			message.Fields[fieldName] = &messageField{
-				Name:     fieldName,
-				DataType: fieldType,
-				Order:    fieldOrder,
-				Modifier: fieldModifier,
-			}
-
-			counter++
-			if counter >= 19000 && counter <= 19999 {
-				counter += 1000
+				Name:      fieldName,
+				DataType:  fieldType,
+				Order:     fieldOrder,
+				Modifier:  fieldModifier,
+				Overwrite: overwrite,
 			}
 		} else if stmt.MessageDefinition() != nil {
 			a.prevMessage = message
@@ -286,7 +297,7 @@ func resolveRpcMethodMessage(name string, ctx parser.IRpcMethodMessageContext) *
 		},
 	}
 
-	counter := 0
+	counter := 1
 	pidx := 1
 	var lastDataType *dataType
 
@@ -401,7 +412,7 @@ func resolveDataType(ctx parser.IDataTypeContext) *dataType {
 func resolvePreprocessorParameters(ctx parser.IPreprocessorParametersContext) []string {
 	params := []string{}
 
-	for _, param := range ctx.AllIDENTIFIER() {
+	for _, param := range ctx.AllRpcMessageValue() {
 		params = append(params, param.GetText())
 	}
 
