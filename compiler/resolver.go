@@ -64,9 +64,9 @@ func (c *Compiler) resolveImportsForPackage(pkg *ScriptPackage) error {
 			fullpath = imp.Path
 		}
 
-		// if path has .plsd extension, try to find the
+		// if path has .plsd extension, try to FindMessageOrEnum the
 		if strings.HasSuffix(fullpath, ".plsd") {
-			impScript := c.findScriptByPath(fullpath)
+			impScript := c.FindScriptByPath(fullpath)
 			if impScript == nil {
 				return fmt.Errorf("imported Script '%s' not found", fullpath)
 			}
@@ -77,7 +77,7 @@ func (c *Compiler) resolveImportsForPackage(pkg *ScriptPackage) error {
 		}
 
 		// else, its probably a package, import all scripts in the package
-		impPkg := c.findPackage(fullpath)
+		impPkg := c.FindPackage(fullpath)
 		if impPkg == nil {
 			return fmt.Errorf("imported package '%s' not found", fullpath)
 		}
@@ -122,7 +122,7 @@ func (c *Compiler) resolveFieldNumbers() error {
 				usedNumbers := map[int]bool{}
 				biggestNumber := 1
 
-				// first iteration: find all used numbers and the biggest assigned number to start from
+				// first iteration: FindMessageOrEnum all used numbers and the biggest assigned number to start from
 				for _, field := range msg.Fields {
 					if field.Order <= 0 {
 						assignedNumber := getAssignedNumber(c.mapping, sc.Path, msg.Name, field.Name)
@@ -210,7 +210,7 @@ func (c *Compiler) resolveFieldNumbers() error {
 	return nil
 }
 
-func (c *Compiler) findPackage(path string) *ScriptPackage {
+func (c *Compiler) FindPackage(path string) *ScriptPackage {
 	return c.findPackageInPackage(path, c.srcPackage)
 }
 
@@ -230,7 +230,7 @@ func (c *Compiler) findPackageInPackage(path string, pkg *ScriptPackage) *Script
 	return nil
 }
 
-func (c *Compiler) findScriptByPath(path string) *Script {
+func (c *Compiler) FindScriptByPath(path string) *Script {
 	return c.findScriptByPathInPackage(path, c.srcPackage)
 }
 
@@ -250,27 +250,27 @@ func (c *Compiler) findScriptByPathInPackage(path string, pkg *ScriptPackage) *S
 	return nil
 }
 
-// find finds a Message or Enum by its identifier. The identifier can be concatenated with dots to represent a nested Message.
+// FindMessageOrEnum finds a Message or Enum by its identifier. The identifier can be concatenated with dots to represent a nested Message.
 // A Message can be in one of two nested places: another package or another Message. messages have higher precedence than packages.
-func (p *Script) find(identifier string) *findResult {
+func (p *Script) FindMessageOrEnum(identifier string) *FindResult {
 	parts := strings.Split(identifier, ".")
 	if len(parts) == 1 {
 		if msg, ok := p.Messages[identifier]; ok {
-			return &findResult{Message: msg}
+			return &FindResult{Message: msg}
 		}
 
 		if enm, ok := p.Enums[identifier]; ok {
-			return &findResult{Enum: enm}
+			return &FindResult{Enum: enm}
 		}
 
 		for _, sc := range p.AccessibleScripts {
 			if sc.Package == p.Package {
 				if msg, ok := sc.Messages[identifier]; ok {
-					return &findResult{Message: msg}
+					return &FindResult{Message: msg}
 				}
 
 				if enm, ok := sc.Enums[identifier]; ok {
-					return &findResult{Enum: enm}
+					return &FindResult{Enum: enm}
 				}
 			}
 		}
@@ -283,21 +283,21 @@ func (p *Script) find(identifier string) *findResult {
 			if sc.Package != p.Package {
 				if sc.Package.Name == parts[0] {
 					if msg, ok := sc.Messages[parts[1]]; ok {
-						return &findResult{Message: msg}
+						return &FindResult{Message: msg}
 					}
 
 					if enm, ok := sc.Enums[parts[1]]; ok {
-						return &findResult{Enum: enm}
+						return &FindResult{Enum: enm}
 					}
 				}
 			}
 		}
 	}
 
-	var findNestedMessage func(msg *Message, parts []string) *findResult
-	findNestedMessage = func(msg *Message, parts []string) *findResult {
+	var findNestedMessage func(msg *Message, parts []string) *FindResult
+	findNestedMessage = func(msg *Message, parts []string) *FindResult {
 		if len(parts) <= 0 {
-			return &findResult{Message: msg}
+			return &FindResult{Message: msg}
 		}
 
 		if nestedMsg, ok := msg.Children[parts[0]]; ok {
@@ -315,7 +315,12 @@ func (p *Script) find(identifier string) *findResult {
 	return findNestedMessage(msg, parts[1:])
 }
 
-func (sc *Script) isTypeDeclared(t string) bool {
+type FindResult struct {
+	Message *Message
+	Enum    *Enum
+}
+
+func (sc *Script) IsTypeDeclared(t string) bool {
 	if _, ok := sc.DeclaredTypes[t]; ok {
 		return true
 	}
@@ -331,12 +336,7 @@ func (sc *Script) isTypeDeclared(t string) bool {
 	return false
 }
 
-type findResult struct {
-	Message *Message
-	Enum    *Enum
-}
-
-func (p *Script) resolveDataTypeAlias(possibleAlias string) string {
+func (p *Script) ResolveDataTypeAlias(possibleAlias string) string {
 	if possibleAlias == "int" {
 		return "int32"
 	}
@@ -365,7 +365,7 @@ func (p *Script) resolveDataTypeAlias(possibleAlias string) string {
 	return alias
 }
 
-func isNativeType(identifier string) bool {
+func IsNativeType(identifier string) bool {
 	switch identifier {
 	case "double", "float", "int32", "int64", "uint32", "uint64", "sint32", "sint64", "fixed32", "fixed64", "sfixed32", "sfixed64", "bool", "string", "bytes":
 		return true

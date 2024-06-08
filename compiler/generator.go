@@ -164,9 +164,9 @@ func (c *Compiler) generatePackage(dir string, pkg *ScriptPackage) error {
 					input = "common.EmptyRequest"
 				} else {
 					if rpc.Input.Message == nil {
-						msgName := sc.resolveDataTypeAlias(*rpc.Input.Name)
+						msgName := sc.ResolveDataTypeAlias(*rpc.Input.Name)
 
-						if sc.isTypeDeclared(msgName) || isMessageAvailable(sc, msgName) {
+						if sc.IsTypeDeclared(msgName) || isMessageAvailable(sc, msgName) {
 							input = msgName
 						} else {
 							panic(fmt.Errorf("Message %s not found in Script %s", msgName, sc.Path))
@@ -180,9 +180,9 @@ func (c *Compiler) generatePackage(dir string, pkg *ScriptPackage) error {
 					output = "common.EmptyResponse"
 				} else {
 					if rpc.Returns.Message == nil {
-						msgName := sc.resolveDataTypeAlias(*rpc.Returns.Name)
+						msgName := sc.ResolveDataTypeAlias(*rpc.Returns.Name)
 
-						if sc.isTypeDeclared(msgName) || isMessageAvailable(sc, msgName) {
+						if sc.IsTypeDeclared(msgName) || isMessageAvailable(sc, msgName) {
 							output = msgName
 						} else {
 							panic(fmt.Errorf("Message %s not found in Script %s", msgName, sc.Path))
@@ -243,18 +243,18 @@ func (c *Compiler) generateCommons(dir string, res, req bool, opts map[string]st
 }
 
 func isDataTypeValidInContext(sc *Script, dt *DataType) bool {
-	dt.Text = sc.resolveDataTypeAlias(dt.Text)
+	dt.Text = sc.ResolveDataTypeAlias(dt.Text)
 	t := dt.Text
 
-	if isNativeType(t) {
+	if IsNativeType(t) {
 		return true
 	}
 
-	if sc.isTypeDeclared(t) {
+	if sc.IsTypeDeclared(t) {
 		return true
 	}
 
-	result := sc.find(t)
+	result := sc.FindMessageOrEnum(t)
 	if result == nil || (result.Enum == nil && result.Message == nil) {
 		return false
 	}
@@ -263,7 +263,7 @@ func isDataTypeValidInContext(sc *Script, dt *DataType) bool {
 }
 
 func isMessageAvailable(sc *Script, name string) bool {
-	result := sc.find(name)
+	result := sc.FindMessageOrEnum(name)
 	return result != nil && result.Message != nil
 }
 
