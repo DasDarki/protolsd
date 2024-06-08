@@ -21,28 +21,30 @@ func main() {
 				Usage:   "The directory to compile",
 			},
 			&cli.BoolFlag{
-				Name:    "verbose",
-				Aliases: []string{"V"},
-				Usage:   "Enable verbose output",
+				Name:        "verbose",
+				Aliases:     []string{"V"},
+				Usage:       "Enable verbose output",
+				Required:    false,
+				DefaultText: "false",
 			},
 			&cli.BoolFlag{
-				Name:    "debug",
-				Aliases: []string{"D"},
-				Usage:   "Enable debug output",
+				Name:        "debug",
+				Aliases:     []string{"D"},
+				Usage:       "Enable debug output",
+				Required:    false,
+				DefaultText: "false",
 			},
 			&cli.BoolFlag{
-				Name:    "quiet",
-				Aliases: []string{"Q"},
-				Usage:   "Disable all output. This will overwrite verbose and debug flags.",
-			},
-			&cli.BoolFlag{
-				Name:    "lsp",
-				Aliases: []string{"l"},
-				Usage:   "Starts the compiler in LSP server mode. There will be no compiled output.",
+				Name:        "quiet",
+				Aliases:     []string{"Q"},
+				Usage:       "Disable all output. This will overwrite verbose and debug flags.",
+				Required:    false,
+				DefaultText: "false",
 			},
 		},
 		Commands: []*cli.Command{
 			initCmd(),
+			lspCmd(),
 		},
 	}
 
@@ -95,7 +97,7 @@ func compile(c *cli.Context) error {
 		return err
 	}
 
-	compiler := compiler.NewCompiler(config, dir, c.Bool("lsp"), logger)
+	compiler := compiler.NewCompiler(config, dir, false, logger)
 	if err := compiler.Compile(); err != nil {
 		logger.Crit("Failed to compile!")
 
@@ -103,4 +105,23 @@ func compile(c *cli.Context) error {
 	}
 
 	return nil
+}
+
+func lspCmd() *cli.Command {
+	return &cli.Command{
+		Name:        "lsp",
+		Description: "Start a new language server protocol instance",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "dir",
+				Aliases:  []string{"d"},
+				Usage:    "The directory to compile",
+				Required: true,
+			},
+		},
+		Action: func(c *cli.Context) error {
+
+			return nil
+		},
+	}
 }

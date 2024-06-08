@@ -6,7 +6,7 @@ import (
 )
 
 // Oh boi. Well, that escalated quickly.
-// This map is basically script -> message -> field -> order
+// This map is basically Script -> Message -> field -> order
 type fieldNumberMapping map[string]map[string]map[string]int
 
 func getAssignedNumber(mapping fieldNumberMapping, script, message, field string) *int {

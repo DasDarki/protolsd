@@ -19,7 +19,7 @@ const (
 	releaseDownloadUrl   = "https://github.com/protocolbuffers/protobuf/releases/download/%s/%s"
 )
 
-func DownloadProtobuf(version string, logger *util.Logger) (string, error) {
+func DownloadProtobuf(version string, logger util.Logger) (string, error) {
 	logger.Info("Checking for existing protoc installation...")
 
 	cachePath, err := getCachePath()

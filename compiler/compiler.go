@@ -15,26 +15,26 @@ type Compiler struct {
 	config     *Config
 	baseDir    string
 	srcDir     string
-	srcPackage *scriptPackage
-	scripts    []*script
+	srcPackage *ScriptPackage
+	scripts    []*Script
 	mapping    fieldNumberMapping
-	loggger    *util.Logger
+	loggger    util.Logger
 	lspMode    bool
 }
 
-func NewCompiler(config *Config, baseDir string, lspMode bool, logger *util.Logger) *Compiler {
+func NewCompiler(config *Config, baseDir string, lspMode bool, logger util.Logger) *Compiler {
 	c := &Compiler{
 		config:  config,
 		baseDir: baseDir,
 		srcDir:  path.Join(baseDir, config.InputDir),
-		srcPackage: &scriptPackage{
+		srcPackage: &ScriptPackage{
 			Path:              "",
 			Name:              unptr(config.Protobuf.Package),
 			AreImportsPrivate: false,
-			Scripts:           map[string]*script{},
-			Packages:          map[string]*scriptPackage{},
+			Scripts:           map[string]*Script{},
+			Packages:          map[string]*ScriptPackage{},
 		},
-		scripts: []*script{},
+		scripts: []*Script{},
 		mapping: fieldNumberMapping{},
 		lspMode: lspMode,
 		loggger: logger,
@@ -127,14 +127,14 @@ func (c *Compiler) Compile() error {
 func (c *Compiler) Debug() {
 	jsonText, err := json.MarshalIndent(c.srcPackage, "", "  ")
 	if err != nil {
-		c.loggger.Err("Failed to marshal script to JSON: %v", err)
+		c.loggger.Err("Failed to marshal Script to JSON: %v", err)
 		return
 	}
 
 	println(string(jsonText))
 }
 
-func (c *Compiler) analyzeDir(dir string, pkg *scriptPackage) error {
+func (c *Compiler) analyzeDir(dir string, pkg *ScriptPackage) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return err
@@ -142,13 +142,13 @@ func (c *Compiler) analyzeDir(dir string, pkg *scriptPackage) error {
 
 	for _, entry := range entries {
 		if entry.IsDir() {
-			childPkg := &scriptPackage{
+			childPkg := &ScriptPackage{
 				Name:              entry.Name(),
 				Path:              path.Join(dir, entry.Name()),
 				AreImportsPrivate: false,
 				Parent:            pkg,
-				Scripts:           map[string]*script{},
-				Packages:          map[string]*scriptPackage{},
+				Scripts:           map[string]*Script{},
+				Packages:          map[string]*ScriptPackage{},
 			}
 
 			pkg.Packages[childPkg.Name] = childPkg
@@ -166,7 +166,7 @@ func (c *Compiler) analyzeDir(dir string, pkg *scriptPackage) error {
 	return nil
 }
 
-func (c *Compiler) anaylzeFile(file string, pkg *scriptPackage) error {
+func (c *Compiler) anaylzeFile(file string, pkg *ScriptPackage) error {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return err
@@ -178,15 +178,15 @@ func (c *Compiler) anaylzeFile(file string, pkg *scriptPackage) error {
 	p := parser.NewProtoLSDParser(stream)
 
 	a := &analyzer{
-		script: &script{
+		script: &Script{
 			Package:       pkg,
 			Path:          file,
-			Imports:       []*importStatement{},
+			Imports:       []*ImportStatement{},
 			TypeAliases:   map[string]string{},
 			DeclaredTypes: map[string]bool{},
-			Enums:         map[string]*enum{},
-			Messages:      map[string]*message{},
-			Services:      map[string]*service{},
+			Enums:         map[string]*Enum{},
+			Messages:      map[string]*Message{},
+			Services:      map[string]*Service{},
 		},
 		inGlobalScope:      true,
 		visitedMessageDefs: map[*parser.MessageDefinitionContext]bool{},

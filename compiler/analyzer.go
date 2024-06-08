@@ -11,9 +11,9 @@ import (
 type analyzer struct {
 	*parser.BaseProtoLSDListener
 	inGlobalScope      bool
-	script             *script
-	prevMessage        *message
-	currSerivce        *service
+	script             *Script
+	prevMessage        *Message
+	currSerivce        *Service
 	visitedMessageDefs map[*parser.MessageDefinitionContext]bool
 }
 
@@ -78,7 +78,7 @@ func (a *analyzer) EnterImportStatement(ctx *parser.ImportStatementContext) {
 		isPrivate = true
 	}
 
-	importStmt := &importStatement{
+	importStmt := &ImportStatement{
 		Path:    path,
 		Private: isPrivate,
 	}
@@ -91,7 +91,7 @@ func (a *analyzer) EnterEnumDefinition(ctx *parser.EnumDefinitionContext) {
 	isEnumClass := true
 
 	if _, ok := a.script.Enums[name]; ok {
-		panic(fmt.Sprintf("enum '%s' already defined", name))
+		panic(fmt.Sprintf("Enum '%s' already defined", name))
 	}
 
 	for _, preproc := range ctx.AllAnnotationDirective() {
@@ -101,7 +101,7 @@ func (a *analyzer) EnterEnumDefinition(ctx *parser.EnumDefinitionContext) {
 		}
 	}
 
-	enum := &enum{
+	enum := &Enum{
 		Name:      name,
 		IsClass:   isEnumClass,
 		Constants: map[string]int{},
@@ -118,7 +118,7 @@ func (a *analyzer) EnterEnumDefinition(ctx *parser.EnumDefinitionContext) {
 			value := field.NUMBER().GetText()
 			intVal, err := strconv.Atoi(value)
 			if err != nil {
-				panic(fmt.Sprintf("invalid number '%s' for enum field '%s'", value, fieldName))
+				panic(fmt.Sprintf("invalid number '%s' for Enum field '%s'", value, fieldName))
 			}
 
 			fieldValue = intVal
@@ -129,7 +129,7 @@ func (a *analyzer) EnterEnumDefinition(ctx *parser.EnumDefinitionContext) {
 		}
 
 		if _, ok := enum.Constants[fieldName]; ok {
-			panic(fmt.Sprintf("enum field '%s' already defined in enum '%s'", fieldName, name))
+			panic(fmt.Sprintf("Enum field '%s' already defined in Enum '%s'", fieldName, name))
 		}
 
 		enum.Constants[fieldName] = fieldValue
@@ -148,14 +148,14 @@ func (a *analyzer) EnterMessageDefinition(ctx *parser.MessageDefinitionContext) 
 	name := ctx.IDENTIFIER().GetText()
 	if parent != nil {
 		if a.script.Messages[name] != nil {
-			panic(fmt.Sprintf("message '%s' already defined", name))
+			panic(fmt.Sprintf("Message '%s' already defined", name))
 		}
 	}
 
-	message := &message{
+	message := &Message{
 		Name:     name,
 		Fields:   map[string]*messageField{},
-		Children: map[string]*message{},
+		Children: map[string]*Message{},
 	}
 
 	if parent != nil {
@@ -181,11 +181,11 @@ func (a *analyzer) EnterMessageDefinition(ctx *parser.MessageDefinitionContext) 
 			if field.NUMBER() != nil {
 				order, err := strconv.Atoi(field.NUMBER().GetText())
 				if err != nil {
-					panic(fmt.Sprintf("invalid number '%s' for message field '%s'", field.NUMBER().GetText(), fieldName))
+					panic(fmt.Sprintf("invalid number '%s' for Message field '%s'", field.NUMBER().GetText(), fieldName))
 				}
 
 				if order < 0 || (order >= 19000 && order <= 19999) {
-					panic(fmt.Sprintf("invalid order '%d' for message field '%s': must be in the range [0, 18999] or [20000, 536870911]", order, fieldName))
+					panic(fmt.Sprintf("invalid order '%d' for Message field '%s': must be in the range [0, 18999] or [20000, 536870911]", order, fieldName))
 				}
 
 				fieldOrder = order
@@ -196,7 +196,7 @@ func (a *analyzer) EnterMessageDefinition(ctx *parser.MessageDefinitionContext) 
 			}
 
 			if _, ok := message.Fields[fieldName]; ok {
-				panic(fmt.Sprintf("field '%s' already defined in message '%s'", fieldName, name))
+				panic(fmt.Sprintf("field '%s' already defined in Message '%s'", fieldName, name))
 			}
 
 			message.Fields[fieldName] = &messageField{
@@ -219,12 +219,12 @@ func (a *analyzer) EnterMessageDefinition(ctx *parser.MessageDefinitionContext) 
 func (a *analyzer) EnterServiceDefinition(ctx *parser.ServiceDefinitionContext) {
 	name := ctx.IDENTIFIER().GetText()
 	if a.script.Services[name] != nil {
-		panic(fmt.Sprintf("service '%s' already defined", name))
+		panic(fmt.Sprintf("Service '%s' already defined", name))
 	}
 
-	service := &service{
+	service := &Service{
 		Name: name,
-		Rpcs: map[string]*rpcMethod{},
+		Rpcs: map[string]*RpcMethod{},
 	}
 
 	a.script.Services[name] = service
@@ -237,7 +237,7 @@ func (a *analyzer) EnterServiceDefinition(ctx *parser.ServiceDefinitionContext) 
 
 func (a *analyzer) EnterRpcDefinition(ctx *parser.RpcDefinitionContext) {
 	if a.currSerivce == nil {
-		panic("rpc definition outside of service definition")
+		panic("rpc definition outside of Service definition")
 	}
 
 	name := ctx.IDENTIFIER().GetText()
@@ -245,12 +245,12 @@ func (a *analyzer) EnterRpcDefinition(ctx *parser.RpcDefinitionContext) {
 		return
 	}
 
-	var input *rpcMethodMessage
+	var input *RpcMethodMessage
 	if ctx.RpcInput() != nil {
 		input = resolveRpcMethodMessage(name+"Request", ctx.RpcInput().RpcMethodMessage())
 	}
 
-	var returns *rpcMethodMessage
+	var returns *RpcMethodMessage
 	if ctx.RpcReturn() != nil {
 		returns = resolveRpcMethodMessage(name+"Response", ctx.RpcReturn().RpcMethodMessage())
 	}
@@ -263,7 +263,7 @@ func (a *analyzer) EnterRpcDefinition(ctx *parser.RpcDefinitionContext) {
 		a.script.UsedEmptyResponse = true
 	}
 
-	rpc := &rpcMethod{
+	rpc := &RpcMethod{
 		Name:    name,
 		Returns: returns,
 		Input:   input,
@@ -272,13 +272,13 @@ func (a *analyzer) EnterRpcDefinition(ctx *parser.RpcDefinitionContext) {
 	a.currSerivce.Rpcs[name] = rpc
 }
 
-func resolveRpcMethodMessage(name string, ctx parser.IRpcMethodMessageContext) *rpcMethodMessage {
+func resolveRpcMethodMessage(name string, ctx parser.IRpcMethodMessageContext) *RpcMethodMessage {
 	if ctx.OBJECT() != nil {
 		return nil
 	}
 
 	if ctx.RpcSingleMessage() != nil && ctx.RpcSingleMessage().RpcMessageValue() != nil {
-		return &rpcMethodMessage{
+		return &RpcMethodMessage{
 			NeedsAutoWire: true,
 			Name:          ptr(ctx.RpcSingleMessage().RpcMessageValue().GetText()),
 		}
@@ -294,19 +294,19 @@ func resolveRpcMethodMessage(name string, ctx parser.IRpcMethodMessageContext) *
 		return nil
 	}
 
-	rm := &rpcMethodMessage{
+	rm := &RpcMethodMessage{
 		NeedsAutoWire: false,
 		Name:          &name,
-		Message: &message{
+		Message: &Message{
 			Name:     name,
-			Children: map[string]*message{},
+			Children: map[string]*Message{},
 			Fields:   map[string]*messageField{},
 		},
 	}
 
 	counter := 1
 	pidx := 1
-	var lastDataType *dataType
+	var lastDataType *DataType
 
 	for _, param := range ctx.RpcParameters().AllRpcParameter() {
 		if lastDataType != nil && (param.DataType() == nil || (param.PLUS() == nil && param.RpcParameterModifier() == nil)) {
@@ -340,7 +340,7 @@ func resolveRpcMethodMessage(name string, ctx parser.IRpcMethodMessageContext) *
 			}
 
 			if param.RpcParameterModifier() == nil && paramsLen == 1 {
-				return &rpcMethodMessage{
+				return &RpcMethodMessage{
 					NeedsAutoWire: true,
 					Name:          ptr(dataType.Text),
 				}
@@ -368,7 +368,7 @@ func resolveRpcMethodMessage(name string, ctx parser.IRpcMethodMessageContext) *
 					fieldName = *pname
 
 					if _, ok := rm.Message.Fields[fieldName]; ok {
-						panic(fmt.Sprintf("field '%s' already defined in rpc message '%s'", fieldName, *pname))
+						panic(fmt.Sprintf("field '%s' already defined in rpc Message '%s'", fieldName, *pname))
 					}
 				} else {
 					fieldName = fmt.Sprintf("val%d", pidx)
@@ -404,12 +404,12 @@ func resolveRpcMethodMessage(name string, ctx parser.IRpcMethodMessageContext) *
 	return rm
 }
 
-func resolveDataType(ctx parser.IDataTypeContext) *dataType {
+func resolveDataType(ctx parser.IDataTypeContext) *DataType {
 	text := ctx.DataTypeText().GetText()
 	isOptional := ctx.QUESTION() != nil
 	isArray := ctx.ARRAY() != nil
 
-	return &dataType{
+	return &DataType{
 		Text:       text,
 		IsOptional: isOptional,
 		IsArray:    isArray,

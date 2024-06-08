@@ -29,7 +29,7 @@ func (c *Compiler) generate() (string, error) {
 	return outdir, nil
 }
 
-func (c *Compiler) generatePackage(dir string, pkg *scriptPackage) error {
+func (c *Compiler) generatePackage(dir string, pkg *ScriptPackage) error {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
@@ -100,13 +100,13 @@ func (c *Compiler) generatePackage(dir string, pkg *scriptPackage) error {
 	}
 
 	for _, sc := range pkg.Scripts {
-		var generateMessage func(*message, *ProtoBuilder)
-		generateMessage = func(m *message, pb *ProtoBuilder) {
+		var generateMessage func(*Message, *ProtoBuilder)
+		generateMessage = func(m *Message, pb *ProtoBuilder) {
 			fields := map[string]ProtoField{}
 
 			for _, f := range m.Fields {
 				if !isDataTypeValidInContext(sc, f.DataType) {
-					panic(fmt.Errorf("invalid data type %s for %s of %s in context of script %s", f.DataType.Text, f.Name, m.Name, sc.Path))
+					panic(fmt.Errorf("invalid data type %s for %s of %s in context of Script %s", f.DataType.Text, f.Name, m.Name, sc.Path))
 				}
 
 				modifiers := []string{}
@@ -169,7 +169,7 @@ func (c *Compiler) generatePackage(dir string, pkg *scriptPackage) error {
 						if sc.isTypeDeclared(msgName) || isMessageAvailable(sc, msgName) {
 							input = msgName
 						} else {
-							panic(fmt.Errorf("message %s not found in script %s", msgName, sc.Path))
+							panic(fmt.Errorf("Message %s not found in Script %s", msgName, sc.Path))
 						}
 					} else {
 						input = rpc.Input.Message.Name
@@ -185,7 +185,7 @@ func (c *Compiler) generatePackage(dir string, pkg *scriptPackage) error {
 						if sc.isTypeDeclared(msgName) || isMessageAvailable(sc, msgName) {
 							output = msgName
 						} else {
-							panic(fmt.Errorf("message %s not found in script %s", msgName, sc.Path))
+							panic(fmt.Errorf("Message %s not found in Script %s", msgName, sc.Path))
 						}
 					} else {
 						output = rpc.Returns.Message.Name
@@ -242,7 +242,7 @@ func (c *Compiler) generateCommons(dir string, res, req bool, opts map[string]st
 	return nil
 }
 
-func isDataTypeValidInContext(sc *script, dt *dataType) bool {
+func isDataTypeValidInContext(sc *Script, dt *DataType) bool {
 	dt.Text = sc.resolveDataTypeAlias(dt.Text)
 	t := dt.Text
 
@@ -262,7 +262,7 @@ func isDataTypeValidInContext(sc *script, dt *dataType) bool {
 	return true
 }
 
-func isMessageAvailable(sc *script, name string) bool {
+func isMessageAvailable(sc *Script, name string) bool {
 	result := sc.find(name)
 	return result != nil && result.Message != nil
 }

@@ -61,7 +61,7 @@ func (pb *ProtoBuilder) AddImport(importPath string) {
 }
 
 func (pb *ProtoBuilder) AddMessage(name string, fields map[string]ProtoField, nestedCallback func(*ProtoBuilder)) {
-	pb.addLine(fmt.Sprintf("message %s {", name))
+	pb.addLine(fmt.Sprintf("Message %s {", name))
 	pb.indent()
 
 	if nestedCallback != nil {
@@ -78,7 +78,7 @@ func (pb *ProtoBuilder) AddMessage(name string, fields map[string]ProtoField, ne
 }
 
 func (pb *ProtoBuilder) AddEnum(name string, values map[int]string) {
-	pb.addLine(fmt.Sprintf("enum %s {", name))
+	pb.addLine(fmt.Sprintf("Enum %s {", name))
 	pb.indent()
 
 	keys := make([]int, 0, len(values))
@@ -98,7 +98,7 @@ func (pb *ProtoBuilder) AddEnum(name string, values map[int]string) {
 }
 
 func (pb *ProtoBuilder) AddService(name string, methods map[string][2]string) {
-	pb.addLine(fmt.Sprintf("service %s {", name))
+	pb.addLine(fmt.Sprintf("Service %s {", name))
 	pb.indent()
 	for methodName, params := range methods {
 		requestType := params[0]

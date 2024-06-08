@@ -27,10 +27,10 @@ func (c *Compiler) resolveImports() error {
 	return c.resolveImportsForPackage(c.srcPackage)
 }
 
-func (c *Compiler) resolveImportsForPackage(pkg *scriptPackage) error {
-	var addImportToScript func(sc *script, imp *importStatement) error
+func (c *Compiler) resolveImportsForPackage(pkg *ScriptPackage) error {
+	var addImportToScript func(sc *Script, imp *ImportStatement) error
 
-	makeAccessiable := func(curr *script, target *script) {
+	makeAccessiable := func(curr *Script, target *Script) {
 		curr.AccessibleScripts = append(curr.AccessibleScripts, target)
 
 		if target.AreImportsPrivate {
@@ -46,7 +46,7 @@ func (c *Compiler) resolveImportsForPackage(pkg *scriptPackage) error {
 		}
 	}
 
-	addImportToScript = func(sc *script, imp *importStatement) error {
+	addImportToScript = func(sc *Script, imp *ImportStatement) error {
 		// if path has .proto extension, skip
 		if strings.HasSuffix(imp.Path, ".proto") {
 			return nil
@@ -68,7 +68,7 @@ func (c *Compiler) resolveImportsForPackage(pkg *scriptPackage) error {
 		if strings.HasSuffix(fullpath, ".plsd") {
 			impScript := c.findScriptByPath(fullpath)
 			if impScript == nil {
-				return fmt.Errorf("imported script '%s' not found", fullpath)
+				return fmt.Errorf("imported Script '%s' not found", fullpath)
 			}
 
 			makeAccessiable(sc, impScript)
@@ -90,7 +90,7 @@ func (c *Compiler) resolveImportsForPackage(pkg *scriptPackage) error {
 	}
 
 	for _, sc := range pkg.Scripts {
-		sc.AccessibleScripts = []*script{}
+		sc.AccessibleScripts = []*Script{}
 		for _, osc := range pkg.Scripts { // add all siblings to the context
 			if osc == sc {
 				continue
@@ -117,8 +117,8 @@ func (c *Compiler) resolveImportsForPackage(pkg *scriptPackage) error {
 func (c *Compiler) resolveFieldNumbers() error {
 	for _, sc := range c.scripts {
 		for _, msg := range sc.Messages {
-			var assignNumbers func(*message) error
-			assignNumbers = func(msg *message) error {
+			var assignNumbers func(*Message) error
+			assignNumbers = func(msg *Message) error {
 				usedNumbers := map[int]bool{}
 				biggestNumber := 1
 
@@ -143,7 +143,7 @@ func (c *Compiler) resolveFieldNumbers() error {
 					}
 
 					if usedNumbers[field.Order] {
-						return fmt.Errorf("field number %d is already used in message '%s'", field.Order, msg.Name)
+						return fmt.Errorf("field number %d is already used in Message '%s'", field.Order, msg.Name)
 					}
 
 					usedNumbers[field.Order] = true
@@ -210,11 +210,11 @@ func (c *Compiler) resolveFieldNumbers() error {
 	return nil
 }
 
-func (c *Compiler) findPackage(path string) *scriptPackage {
+func (c *Compiler) findPackage(path string) *ScriptPackage {
 	return c.findPackageInPackage(path, c.srcPackage)
 }
 
-func (c *Compiler) findPackageInPackage(path string, pkg *scriptPackage) *scriptPackage {
+func (c *Compiler) findPackageInPackage(path string, pkg *ScriptPackage) *ScriptPackage {
 	if path == "" {
 		return pkg
 	}
@@ -230,11 +230,11 @@ func (c *Compiler) findPackageInPackage(path string, pkg *scriptPackage) *script
 	return nil
 }
 
-func (c *Compiler) findScriptByPath(path string) *script {
+func (c *Compiler) findScriptByPath(path string) *Script {
 	return c.findScriptByPathInPackage(path, c.srcPackage)
 }
 
-func (c *Compiler) findScriptByPathInPackage(path string, pkg *scriptPackage) *script {
+func (c *Compiler) findScriptByPathInPackage(path string, pkg *ScriptPackage) *Script {
 	for p, sc := range pkg.Scripts {
 		if p == path {
 			return sc
@@ -250,9 +250,9 @@ func (c *Compiler) findScriptByPathInPackage(path string, pkg *scriptPackage) *s
 	return nil
 }
 
-// find finds a message or enum by its identifier. The identifier can be concatenated with dots to represent a nested message.
-// A message can be in one of two nested places: another package or another message. messages have higher precedence than packages.
-func (p *script) find(identifier string) *findResult {
+// find finds a Message or Enum by its identifier. The identifier can be concatenated with dots to represent a nested Message.
+// A Message can be in one of two nested places: another package or another Message. messages have higher precedence than packages.
+func (p *Script) find(identifier string) *findResult {
 	parts := strings.Split(identifier, ".")
 	if len(parts) == 1 {
 		if msg, ok := p.Messages[identifier]; ok {
@@ -294,8 +294,8 @@ func (p *script) find(identifier string) *findResult {
 		}
 	}
 
-	var findNestedMessage func(msg *message, parts []string) *findResult
-	findNestedMessage = func(msg *message, parts []string) *findResult {
+	var findNestedMessage func(msg *Message, parts []string) *findResult
+	findNestedMessage = func(msg *Message, parts []string) *findResult {
 		if len(parts) <= 0 {
 			return &findResult{Message: msg}
 		}
@@ -315,7 +315,7 @@ func (p *script) find(identifier string) *findResult {
 	return findNestedMessage(msg, parts[1:])
 }
 
-func (sc *script) isTypeDeclared(t string) bool {
+func (sc *Script) isTypeDeclared(t string) bool {
 	if _, ok := sc.DeclaredTypes[t]; ok {
 		return true
 	}
@@ -332,11 +332,11 @@ func (sc *script) isTypeDeclared(t string) bool {
 }
 
 type findResult struct {
-	Message *message
-	Enum    *enum
+	Message *Message
+	Enum    *Enum
 }
 
-func (p *script) resolveDataTypeAlias(possibleAlias string) string {
+func (p *Script) resolveDataTypeAlias(possibleAlias string) string {
 	if possibleAlias == "int" {
 		return "int32"
 	}

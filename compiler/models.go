@@ -1,73 +1,73 @@
 package compiler
 
-type scriptPackage struct {
+type ScriptPackage struct {
 	Path              string                    `json:"path"`
 	Name              string                    `json:"name"`
 	AreImportsPrivate bool                      `json:"areImportsPrivate"`
-	Parent            *scriptPackage            `json:"parent"`
-	Scripts           map[string]*script        `json:"scripts"`
-	Packages          map[string]*scriptPackage `json:"packages"`
+	Parent            *ScriptPackage            `json:"parent"`
+	Scripts           map[string]*Script        `json:"scripts"`
+	Packages          map[string]*ScriptPackage `json:"packages"`
 }
 
-type script struct {
-	Package           *scriptPackage      `json:"-"`
+type Script struct {
+	Package           *ScriptPackage      `json:"-"`
 	Path              string              `json:"path"`
 	AreImportsPrivate bool                `json:"areImportsPrivate"`
 	UsedEmptyResponse bool                `json:"usedEmptyResponse"`
 	UsedEmptyRequest  bool                `json:"usedEmptyRequest"`
-	Imports           []*importStatement  `json:"imports"`
+	Imports           []*ImportStatement  `json:"imports"`
 	TypeAliases       map[string]string   `json:"typeAliases"`
 	DeclaredTypes     map[string]bool     `json:"declaredTypes"`
-	Enums             map[string]*enum    `json:"enums"`
-	Messages          map[string]*message `json:"messages"`
-	Services          map[string]*service `json:"services"`
-	AccessibleScripts []*script           `json:"-"` // gets resolved during resolve phase
+	Enums             map[string]*Enum    `json:"enums"`
+	Messages          map[string]*Message `json:"messages"`
+	Services          map[string]*Service `json:"services"`
+	AccessibleScripts []*Script           `json:"-"` // gets resolved during resolve phase
 }
 
-type importStatement struct {
+type ImportStatement struct {
 	Path    string `json:"path"`
 	Private bool   `json:"private"`
 }
 
-type enum struct {
+type Enum struct {
 	Name      string         `json:"name"`
 	IsClass   bool           `json:"isClass"`
 	Constants map[string]int `json:"constants"`
 }
 
-type message struct {
+type Message struct {
 	Name     string                   `json:"name"`
 	Fields   map[string]*messageField `json:"fields"`
-	Children map[string]*message      `json:"children"`
+	Children map[string]*Message      `json:"children"`
 }
 
 type messageField struct {
 	Name      string    `json:"name"`
-	DataType  *dataType `json:"dataType"`
+	DataType  *DataType `json:"DataType"`
 	Order     int       `json:"order"`
 	Modifier  *string   `json:"modifier"`
 	Overwrite bool      `json:"overwrite"`
 }
 
-type dataType struct {
+type DataType struct {
 	Text       string `json:"identifier"`
 	IsOptional bool   `json:"isOptional"`
 	IsArray    bool   `json:"isArray"`
 }
 
-type service struct {
+type Service struct {
 	Name string                `json:"name"`
-	Rpcs map[string]*rpcMethod `json:"rpcs"`
+	Rpcs map[string]*RpcMethod `json:"rpcs"`
 }
 
-type rpcMethod struct {
+type RpcMethod struct {
 	Name    string            `json:"name"`
-	Returns *rpcMethodMessage `json:"returns"` // if nil, empty response should be used
-	Input   *rpcMethodMessage `json:"input"`   // if nil, empty request should be used
+	Returns *RpcMethodMessage `json:"returns"` // if nil, empty response should be used
+	Input   *RpcMethodMessage `json:"input"`   // if nil, empty request should be used
 }
 
-type rpcMethodMessage struct {
+type RpcMethodMessage struct {
 	NeedsAutoWire bool     `json:"needsAutoWire"`
 	Name          *string  `json:"name"`
-	Message       *message `json:"message"`
+	Message       *Message `json:"Message"`
 }

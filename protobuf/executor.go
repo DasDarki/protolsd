@@ -26,7 +26,7 @@ func NewExecutor(target Target, inputDir, outputDir, protocDir string, grpc bool
 	}
 }
 
-func (e *Executor) Execute(logger *util.Logger) error {
+func (e *Executor) Execute(logger util.Logger) error {
 	exePath, err := getExecutablePath(e.protocDir)
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func (e *Executor) Execute(logger *util.Logger) error {
 	return runCommand(exePath, args, logger)
 }
 
-func runCommand(exePath string, args []string, logger *util.Logger) error {
+func runCommand(exePath string, args []string, logger util.Logger) error {
 	cmd := exec.Command(exePath, args...)
 
 	if !logger.IsQuiet() {
