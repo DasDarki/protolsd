@@ -8,21 +8,25 @@ import (
 	"strings"
 )
 
-func (c *Compiler) generate() error {
+func (c *Compiler) generate() (string, error) {
 	outdir := ""
 	if c.config.OutputDir != nil {
 		outdir = path.Join(c.baseDir, *c.config.OutputDir)
 
 		if c.config.OutputType != nil && *c.config.OutputType == OutputTypeCompiled {
-			outdir = path.Join(outdir, "lsd_transpiled")
+			outdir = path.Join(outdir, ".lsd_transpiled")
 		}
 	}
 
 	if outdir == "" {
-		return errors.New("output directory not set")
+		return "", errors.New("output directory not set")
 	}
 
-	return c.generatePackage(outdir, c.srcPackage)
+	if err := c.generatePackage(outdir, c.srcPackage); err != nil {
+		return "", err
+	}
+
+	return outdir, nil
 }
 
 func (c *Compiler) generatePackage(dir string, pkg *scriptPackage) error {

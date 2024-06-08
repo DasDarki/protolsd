@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"protolsd/parser"
+	"protolsd/protobuf"
 
 	"github.com/antlr4-go/antlr/v4"
 )
@@ -56,13 +57,55 @@ func (c *Compiler) Compile() error {
 		return err
 	}
 
-	if err := c.generate(); err != nil {
+	inputDir, err := c.generate()
+	if err != nil {
 		return err
 	}
 
 	if c.config.OrderPersist != nil && *c.config.OrderPersist {
 		if err := saveFieldNumberMapping(c.mapping, path.Join(c.baseDir, ".protolsd_persist")); err != nil {
 			log.Printf("WARNING: Failed to save field number mapping: %v", err)
+		}
+	}
+
+	if c.config.OutputType != nil && *c.config.OutputType == OutputTypeCompiled {
+		if c.config.Protobuf.AutoDL != nil && !(*c.config.Protobuf.AutoDL) {
+			log.Printf("CRITICAL: Protobuf auto download is disabled, compiling without protoc not supported!")
+			return nil
+		}
+
+		protocDir, err := protobuf.DownloadProtobuf(*c.config.Protobuf.Version)
+		if err != nil {
+			return err
+		}
+
+		log.Printf("INFO: Using protoc from %s", protocDir)
+
+		if *c.config.WithGRPC {
+			if err := protobuf.CheckGrpcPrerequisities(); err != nil {
+				return err
+			}
+		}
+
+		for _, target := range c.config.Protobuf.Targets {
+			outDirname := target
+
+			if c.config.Protobuf.TargetOptions != nil {
+				if opts, ok := c.config.Protobuf.TargetOptions[target]; ok {
+					if outDir, ok := opts["output_dir"]; ok {
+						outDirname = outDir
+					}
+				}
+			}
+
+			outDir := path.Join(c.baseDir, *c.config.OutputDir, outDirname)
+
+			exe := protobuf.NewExecutor(protobuf.Target(target), inputDir, outDir, protocDir, *c.config.WithGRPC)
+			if err := exe.Execute(); err != nil {
+				return err
+			}
+
+			log.Printf("INFO: Compiled %s to %s", inputDir, outDir)
 		}
 	}
 

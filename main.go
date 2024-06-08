@@ -78,7 +78,5 @@ func compile(c *cli.Context) error {
 		return err
 	}
 
-	compiler.Debug()
-
 	return nil
 }

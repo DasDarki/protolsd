@@ -1,9 +1,10 @@
-env_file = "" # Loads environment variables from a file. If empty, no file is loaded. Any string can be replaced with a "$<env_var_name>" to load the value of an environment variable.
+env_file = ".env" # Loads environment variables from a file. If empty, no file is loaded. Any string can be replaced with a "$<env_var_name>" to load the value of an environment variable.
 
 input_dir = "src" # The directory containing the source files
-output_dir = "out" # The directory to output the generated code to
-output_type = "protobuf" # The output type of the generated code. Either "protobuf" or "compiled". "protobuf" will generate the .proto files, "compiled" will generate the compiled code from the .proto files.
+output_dir = "$PROTOLSD_OUTPUT_DIR" # The directory to output the generated code to
+output_type = "compiled" # The output type of the generated code. Either "protobuf" or "compiled". "protobuf" will generate the .proto files, "compiled" will generate the compiled code from the .proto files.
 order_persist = true # Whether ProtoLSD should save a file containing the order of the fields of every message in the input files.
+with_grpc = true # Whether to generate gRPC code or not
 
 [protobuf]
 version = "27.1" # The version of the protobuf compiler to use. Can be empty or "latest" for the latest version.

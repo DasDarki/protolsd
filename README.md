@@ -197,7 +197,7 @@ To ensure, that the type is present after generating the protobuf files, an impo
 import "google/protobuf/any.proto";
 ```
 
-### Protbuf 3 compatibility
+### Compatibility
 Currently, not all functionality of Protobuf 3 is supported by ProtoLSD. The following features are not supported:
 - Oneof
 - Extensions
@@ -209,6 +209,8 @@ somepackage.Message // this is supported
 somepackage.subpackage.Message // this is not supported
 ```
 
+There is also limited support for gRPC. Only **Go** is currently supported. Sowrry :D
+
 ### Some notes to the persist order mode
 This only works for directly defined messages. This does not work for messages which are defined through direct input/return in the method definition.
 
@@ -216,6 +218,6 @@ This only works for directly defined messages. This does not work for messages w
 - [ ] Add oneof
 - [ ] Add extensions
 - [ ] Add nested packages
-- [ ] Add env variables in the configuration file
-- [ ] Add auto completion to protobuf targets
+- [x] Add env variables in the configuration file
+- [x] Add automatic compilation to protobuf targets
 - [ ] Add LSP and VSCode extension

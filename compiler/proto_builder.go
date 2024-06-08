@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -79,9 +80,18 @@ func (pb *ProtoBuilder) AddMessage(name string, fields map[string]ProtoField, ne
 func (pb *ProtoBuilder) AddEnum(name string, values map[int]string) {
 	pb.addLine(fmt.Sprintf("enum %s {", name))
 	pb.indent()
-	for valueNumber, valueName := range values {
-		pb.addLine(fmt.Sprintf("%s = %d;", valueName, valueNumber))
+
+	keys := make([]int, 0, len(values))
+	for k := range values {
+		keys = append(keys, k)
 	}
+
+	sort.Ints(keys)
+
+	for _, k := range keys {
+		pb.addLine(fmt.Sprintf("%s = %d;", values[k], k))
+	}
+
 	pb.dedent()
 	pb.addLine("}")
 	pb.addLine("")
