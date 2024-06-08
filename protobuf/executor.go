@@ -2,10 +2,10 @@ package protobuf
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path"
+	"protolsd/util"
 )
 
 type Executor struct {
@@ -26,7 +26,7 @@ func NewExecutor(target Target, inputDir, outputDir, protocDir string, grpc bool
 	}
 }
 
-func (e *Executor) Execute() error {
+func (e *Executor) Execute(logger *util.Logger) error {
 	exePath, err := getExecutablePath(e.protocDir)
 	if err != nil {
 		return err
@@ -58,19 +58,26 @@ func (e *Executor) Execute() error {
 
 	args = append(args, path.Join(e.inputDir, "*.proto"))
 
-	return runCommand(exePath, args)
+	return runCommand(exePath, args, logger)
 }
 
-func runCommand(exePath string, args []string) error {
+func runCommand(exePath string, args []string, logger *util.Logger) error {
 	cmd := exec.Command(exePath, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+
+	if !logger.IsQuiet() {
+		if logger.IsVerbose() {
+			cmd.Stdout = os.Stdout
+		}
+
+		cmd.Stderr = os.Stderr
+
+	}
 
 	pathEnv := os.Getenv("PATH")
 	goBinPath := path.Join(os.Getenv("GOPATH"), "bin")
 	cmd.Env = append(os.Environ(), fmt.Sprintf("PATH=%s%c%s", pathEnv, os.PathListSeparator, goBinPath))
 
-	log.Printf("INFO: Running command %s %v", exePath, args)
+	logger.Info("Running command %s %v", exePath, args)
 
 	if err := cmd.Run(); err != nil {
 		return err

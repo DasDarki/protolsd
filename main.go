@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"protolsd/compiler"
+	"protolsd/util"
 
 	"github.com/urfave/cli/v2"
 )
@@ -18,6 +19,26 @@ func main() {
 				Name:    "dir",
 				Aliases: []string{"d"},
 				Usage:   "The directory to compile",
+			},
+			&cli.BoolFlag{
+				Name:    "verbose",
+				Aliases: []string{"V"},
+				Usage:   "Enable verbose output",
+			},
+			&cli.BoolFlag{
+				Name:    "debug",
+				Aliases: []string{"D"},
+				Usage:   "Enable debug output",
+			},
+			&cli.BoolFlag{
+				Name:    "quiet",
+				Aliases: []string{"Q"},
+				Usage:   "Disable all output. This will overwrite verbose and debug flags.",
+			},
+			&cli.BoolFlag{
+				Name:    "lsp",
+				Aliases: []string{"l"},
+				Usage:   "Starts the compiler in LSP server mode. There will be no compiled output.",
 			},
 		},
 		Commands: []*cli.Command{
@@ -53,13 +74,15 @@ func initCmd() *cli.Command {
 }
 
 func compile(c *cli.Context) error {
+	logger := util.NewLogger(c.Bool("quiet"), c.Bool("verbose"), c.Bool("debug"))
+
 	dir := ""
 	if c.String("dir") != "" {
 		dir = c.String("dir")
 	} else {
 		cwd, err := os.Getwd()
 		if err != nil {
-			log.Println("CRITICAL: Failed to get current working directory!")
+			logger.Crit("Failed to get current working directory!")
 			return err
 		}
 
@@ -68,13 +91,14 @@ func compile(c *cli.Context) error {
 
 	config, err := compiler.LoadConfig(dir)
 	if err != nil {
-		log.Println("CRITICAL: Failed to load config! Do you have a protolsd.toml file?")
+		logger.Crit("Failed to load config! Do you have a protolsd.toml file?")
 		return err
 	}
 
-	compiler := compiler.NewCompiler(config, dir)
+	compiler := compiler.NewCompiler(config, dir, c.Bool("lsp"), logger)
 	if err := compiler.Compile(); err != nil {
-		log.Println("CRITICAL: Failed to compile!")
+		logger.Crit("Failed to compile!")
+
 		return err
 	}
 

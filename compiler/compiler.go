@@ -2,11 +2,11 @@ package compiler
 
 import (
 	"encoding/json"
-	"log"
 	"os"
 	"path"
 	"protolsd/parser"
 	"protolsd/protobuf"
+	"protolsd/util"
 
 	"github.com/antlr4-go/antlr/v4"
 )
@@ -18,9 +18,11 @@ type Compiler struct {
 	srcPackage *scriptPackage
 	scripts    []*script
 	mapping    fieldNumberMapping
+	loggger    *util.Logger
+	lspMode    bool
 }
 
-func NewCompiler(config *Config, baseDir string) *Compiler {
+func NewCompiler(config *Config, baseDir string, lspMode bool, logger *util.Logger) *Compiler {
 	c := &Compiler{
 		config:  config,
 		baseDir: baseDir,
@@ -34,12 +36,14 @@ func NewCompiler(config *Config, baseDir string) *Compiler {
 		},
 		scripts: []*script{},
 		mapping: fieldNumberMapping{},
+		lspMode: lspMode,
+		loggger: logger,
 	}
 
 	if c.config.OrderPersist != nil && *c.config.OrderPersist {
 		mapping, err := readFieldNumberMapping(path.Join(baseDir, ".protolsd_persist"))
 		if err != nil {
-			log.Printf("Failed to read field number mapping: %v", err)
+			c.loggger.Err("Failed to read field number mapping: %v", err)
 		} else {
 			c.mapping = mapping
 		}
@@ -53,8 +57,16 @@ func (c *Compiler) Compile() error {
 		return err
 	}
 
+	if c.loggger.IsDebug() {
+		c.Debug()
+	}
+
 	if err := c.resolve(); err != nil {
 		return err
+	}
+
+	if c.lspMode {
+		return nil
 	}
 
 	inputDir, err := c.generate()
@@ -64,22 +76,22 @@ func (c *Compiler) Compile() error {
 
 	if c.config.OrderPersist != nil && *c.config.OrderPersist {
 		if err := saveFieldNumberMapping(c.mapping, path.Join(c.baseDir, ".protolsd_persist")); err != nil {
-			log.Printf("WARNING: Failed to save field number mapping: %v", err)
+			c.loggger.Warn("Failed to save field number mapping: %v", err)
 		}
 	}
 
 	if c.config.OutputType != nil && *c.config.OutputType == OutputTypeCompiled {
 		if c.config.Protobuf.AutoDL != nil && !(*c.config.Protobuf.AutoDL) {
-			log.Printf("CRITICAL: Protobuf auto download is disabled, compiling without protoc not supported!")
+			c.loggger.Crit("Protobuf auto download is disabled, compiling without protoc not supported!")
 			return nil
 		}
 
-		protocDir, err := protobuf.DownloadProtobuf(*c.config.Protobuf.Version)
+		protocDir, err := protobuf.DownloadProtobuf(*c.config.Protobuf.Version, c.loggger)
 		if err != nil {
 			return err
 		}
 
-		log.Printf("INFO: Using protoc from %s", protocDir)
+		c.loggger.Info("Using protoc from %s", protocDir)
 
 		if *c.config.WithGRPC {
 			if err := protobuf.CheckGrpcPrerequisities(); err != nil {
@@ -101,11 +113,11 @@ func (c *Compiler) Compile() error {
 			outDir := path.Join(c.baseDir, *c.config.OutputDir, outDirname)
 
 			exe := protobuf.NewExecutor(protobuf.Target(target), inputDir, outDir, protocDir, *c.config.WithGRPC)
-			if err := exe.Execute(); err != nil {
+			if err := exe.Execute(c.loggger); err != nil {
 				return err
 			}
 
-			log.Printf("INFO: Compiled %s to %s", inputDir, outDir)
+			c.loggger.Info("Compiled %s to %s", inputDir, outDir)
 		}
 	}
 
@@ -115,7 +127,7 @@ func (c *Compiler) Compile() error {
 func (c *Compiler) Debug() {
 	jsonText, err := json.MarshalIndent(c.srcPackage, "", "  ")
 	if err != nil {
-		log.Println("Failed to marshal script to JSON!")
+		c.loggger.Err("Failed to marshal script to JSON: %v", err)
 		return
 	}
 

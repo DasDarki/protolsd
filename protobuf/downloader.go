@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+	"protolsd/util"
 	"runtime"
 	"strings"
 )
@@ -19,16 +19,16 @@ const (
 	releaseDownloadUrl   = "https://github.com/protocolbuffers/protobuf/releases/download/%s/%s"
 )
 
-func DownloadProtobuf(version string) (string, error) {
-	log.Println("INFO: Checking for existing protoc installation...")
+func DownloadProtobuf(version string, logger *util.Logger) (string, error) {
+	logger.Info("Checking for existing protoc installation...")
 
 	cachePath, err := getCachePath()
 	if err != nil {
 		return "", err
 	}
 
-	log.Printf("INFO: Protoc cache path: %s", cachePath)
-	log.Printf("INFO: Searching for version %s...", version)
+	logger.Info("Protoc cache path: %s", cachePath)
+	logger.Info("Searching for version %s...", version)
 
 	if version == "" || version == "latest" {
 		v, err := getLatestVersion()
@@ -42,11 +42,11 @@ func DownloadProtobuf(version string) (string, error) {
 	version = normalizeVersion(version)
 	tag := "v" + version
 
-	log.Printf("INFO: Found version: %s", version)
+	logger.Info("Found version: %s", version)
 
 	versionDir := path.Join(cachePath, tag)
 	if _, err := os.Stat(versionDir); err == nil {
-		log.Printf("INFO: Found existing installation at %s", versionDir)
+		logger.Info("Found existing installation at %s", versionDir)
 		return versionDir, nil
 	}
 
@@ -56,7 +56,7 @@ func DownloadProtobuf(version string) (string, error) {
 		return "", fmt.Errorf("unsupported platform")
 	}
 
-	log.Printf("INFO: Downloading %s...", filename)
+	logger.Info("Downloading %s...", filename)
 
 	resp, err := http.Get(fmt.Sprintf(releaseDownloadUrl, tag, filename))
 	if err != nil {
@@ -77,17 +77,17 @@ func DownloadProtobuf(version string) (string, error) {
 		return "", err
 	}
 
-	log.Printf("INFO: Extracting %s...", protobufZip)
+	logger.Info("Extracting %s...", protobufZip)
 
 	targetDir := path.Join(cachePath, tag)
 	if err := unzip(protobufZip, targetDir); err != nil {
 		return "", err
 	}
 
-	log.Printf("INFO: Cleaning up %s...", protobufZip)
+	logger.Info("Cleaning up %s...", protobufZip)
 
 	if err := os.Remove(protobufZip); err != nil {
-		log.Printf("WARNING: failed to remove %s: %v (its a temp file)", protobufZip, err)
+		logger.Warn("Failed to remove %s: %v (its a temp file)", protobufZip, err)
 	}
 
 	return targetDir, nil
