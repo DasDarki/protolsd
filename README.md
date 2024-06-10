@@ -2,7 +2,7 @@
 ProtoLSD is a custom DSL (domain-specific language) for creating protobuf definitions but simpler, more readable and more powerful.
 
 ## Configuration
-ProtoLSDs behavior is configured by a configuration file. The configuration file should be placed at the root of the project and must be named `.protolsd.toml`.
+ProtoLSDs behavior is configured by a configuration file. The configuration file should be placed at the root of the project and must be named `protolsd.toml`.
 
 ## Specification
 The ProtoLSD specification is based on the official protobuf specification version 3. Following are the additional features of ProtoLSD.

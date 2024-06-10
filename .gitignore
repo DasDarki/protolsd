@@ -1,5 +1,6 @@
 .antlr/
 .bin/
+.idea/
 
 .example/out/
 .example/dist/

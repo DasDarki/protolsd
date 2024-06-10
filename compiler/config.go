@@ -124,7 +124,7 @@ func LoadConfig(dir string) (*Config, error) {
 
 func GenerateMinimalConfig(dir string) error {
 	config := Config{
-		InputDir:   dir,
+		InputDir:   "src",
 		OutputDir:  ptr("dist"),
 		OutputType: ptr(OutputTypeLSD),
 		Protobuf: &ConfigProtobufSection{
@@ -139,6 +139,10 @@ func GenerateMinimalConfig(dir string) error {
 
 	tomlText, err := toml.Marshal(config)
 	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(path.Join(dir, "src"), 0755); err != nil {
 		return err
 	}
 
