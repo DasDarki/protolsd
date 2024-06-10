@@ -199,3 +199,7 @@ func (c *Compiler) anaylzeFile(file string, pkg *ScriptPackage) error {
 
 	return nil
 }
+
+func (c *Compiler) GetCompiledPackage() *ScriptPackage {
+	return c.srcPackage
+}

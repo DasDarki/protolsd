@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"os"
+	"path"
 	"protolsd/compiler"
 	"protolsd/util"
 
@@ -44,14 +46,12 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			initCmd(),
-			lspCmd(),
+			lspCompileCmd(),
 		},
 	}
 
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
-	} else {
-		log.Println("INFO: Done!")
 	}
 }
 
@@ -72,6 +72,20 @@ func initCmd() *cli.Command {
 
 			return nil
 		},
+	}
+}
+
+func lspCompileCmd() *cli.Command {
+	return &cli.Command{
+		Name: "lsp-compile",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "workspace",
+				Aliases: []string{"w"},
+				Usage:   "The workspace to compile",
+			},
+		},
+		Action: lspCompile,
 	}
 }
 
@@ -104,24 +118,59 @@ func compile(c *cli.Context) error {
 		return err
 	}
 
+	log.Println("INFO: Done!")
+
 	return nil
 }
 
-func lspCmd() *cli.Command {
-	return &cli.Command{
-		Name:        "lsp",
-		Description: "Start a new language server protocol instance",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:     "dir",
-				Aliases:  []string{"d"},
-				Usage:    "The directory to compile",
-				Required: true,
-			},
-		},
-		Action: func(c *cli.Context) error {
+func lspCompile(c *cli.Context) error {
+	workspace := c.String("workspace")
 
-			return nil
-		},
+	var config *compiler.Config
+	confFile := path.Join(workspace, "protolsd.toml")
+
+	if _, err := os.Stat(confFile); err == nil {
+		var err error
+		config, err = compiler.LoadConfig(workspace)
+		if err != nil {
+			log.Fatalf("Failed to load config! Do you have a protolsd.toml file? %v", err)
+		}
+	} else {
+		config = &compiler.Config{
+			InputDir:     "src",
+			EnvFile:      util.Ptr(""),
+			OutputDir:    util.Ptr(""),
+			OutputType:   util.Ptr(compiler.OutputTypeLSD),
+			OrderPersist: util.Ptr(true),
+			WithGRPC:     util.Ptr(false),
+			Protobuf: &compiler.ConfigProtobufSection{
+				AutoDL:        util.Ptr(false),
+				Version:       util.Ptr("latest"),
+				Package:       util.Ptr("main"),
+				Targets:       []string{},
+				TargetOptions: map[string]map[string]string{},
+				Options:       map[string]string{},
+			},
+		}
 	}
+
+	comp := compiler.NewCompiler(config, workspace, true, util.NewLogger(true, false, false))
+	compReuslt := map[string]any{}
+
+	if err := comp.Compile(); err != nil {
+		compReuslt["success"] = false
+		compReuslt["error"] = err
+	} else {
+		compReuslt["success"] = true
+		compReuslt["result"] = comp.GetCompiledPackage()
+	}
+
+	jsonResult, err := json.Marshal(compReuslt)
+	if err != nil {
+		log.Fatalf("Failed to marshal result! %v", err)
+	}
+
+	println(string(jsonResult))
+
+	return nil
 }
