@@ -38,20 +38,18 @@ jobs:
 
       - name: Upload Release Asset (Linux and macOS)
         if: ${{ runner.os != 'Windows' }}
-        uses: actions/upload-release-asset@v1
+        uses: svenstaro/upload-release-action@v2
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: dist/protolsd-${{ runner.os }}.tar.gz
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/protolsd-${{ runner.os }}.tar.gz
           asset_name: protolsd-${{ runner.os }}.tar.gz
-          asset_content_type: application/gzip
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref }}
 
       - name: Upload Release Asset (Windows)
         if: ${{ runner.os == 'Windows' }}
-        uses: actions/upload-release-asset@v1
+        uses: svenstaro/upload-release-action@v2
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: dist/protolsd-windows.zip
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/protolsd-windows.zip
           asset_name: protolsd-windows.zip
-          asset_content_type: application/zip
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref }}
