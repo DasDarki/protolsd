@@ -22,7 +22,13 @@ func (a *analyzer) EnterPreprocessorDirective(ctx *parser.PreprocessorDirectiveC
 		return
 	}
 
-	name := ctx.PREPROCESSOR_NAME().GetText()
+	name := ""
+	if ctx.PREPROCESSOR_NAME() != nil {
+		name = ctx.PREPROCESSOR_NAME().GetText()
+	} else {
+		name = ctx.IDENTIFIER().GetText()
+	}
+
 	params := resolvePreprocessorParameters(ctx.PreprocessorParameters())
 
 	if name == "private-import" {

@@ -2,6 +2,8 @@
 
 import "google/protobuf/empty.proto";
 
+#alias(MyMessage, Task)
+
 enum TodoStatus {
   OPEN
   IN_PROGRESS = 5

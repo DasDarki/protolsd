@@ -156,7 +156,7 @@ preprocessorParameters
     ;
 
 preprocessorDirective
-    : HASH PREPROCESSOR_NAME preprocessorParameters?
+    : HASH (PREPROCESSOR_NAME|IDENTIFIER) preprocessorParameters?
     ;
 
 annotationDirective
