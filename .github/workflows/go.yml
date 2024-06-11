@@ -1,0 +1,57 @@
+name: Build and Attach Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.22.2
+
+      - name: Build
+        run: |
+          mkdir -p dist
+          if [[ $RUNNER_OS == 'Windows' ]]; then
+            go build -o dist/protolsd.exe
+          else
+            go build -o dist/protolsd
+          fi
+
+      - name: Archive build artifacts (Linux and macOS)
+        if: ${{ runner.os != 'Windows' }}
+        run: tar -czvf dist/protolsd-${{ runner.os }}.tar.gz -C dist protolsd
+
+      - name: Archive build artifacts (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        run: powershell Compress-Archive -Path dist\protolsd.exe -DestinationPath dist\protolsd-windows.zip
+
+      - name: Upload Release Asset (Linux and macOS)
+        if: ${{ runner.os != 'Windows' }}
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: dist/protolsd-${{ runner.os }}.tar.gz
+          asset_name: protolsd-${{ runner.os }}.tar.gz
+          asset_content_type: application/gzip
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Asset (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: dist/protolsd-windows.zip
+          asset_name: protolsd-windows.zip
+          asset_content_type: application/zip
+          github_token: ${{ secrets.GITHUB_TOKEN }}
