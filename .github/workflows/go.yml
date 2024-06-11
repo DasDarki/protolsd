@@ -1,0 +1,45 @@
+name: Build and Attach Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.22.2
+
+      - name: Build
+        run: |
+          mkdir -p dist
+          if [[ $RUNNER_OS == 'Windows' ]]; then
+            go build -o dist/myapp.exe
+          else
+            go build -o dist/myapp
+          fi
+
+      - name: Archive build artifacts
+        if: ${{ runner.os != 'Windows' }}
+        run: tar -czvf dist/myapp-${{ runner.os }}.tar.gz -C dist myapp
+
+      - name: Archive build artifacts (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        run: powershell Compress-Archive -Path dist\myapp.exe -DestinationPath dist\myapp-windows.zip
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: dist/myapp-${{ runner.os }}*.*
+          asset_name: myapp-${{ runner.os }}.${{ matrix.os == 'windows-latest' && 'zip' || 'tar.gz' }}
+          asset_content_type: application/${{ matrix.os == 'windows-latest' && 'zip' || 'gzip' }}
